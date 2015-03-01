@@ -1,19 +1,118 @@
 package com.aldendino.audoir;
 
+import android.graphics.Point;
+import android.media.AudioFormat;
+import android.media.AudioManager;
+import android.media.AudioTrack;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
+import android.util.Log;
+import android.view.Display;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.MotionEvent;
 
 
 public class MainActivity extends ActionBarActivity {
+
+    private final int valueRange = 20;
+    private int screenWidth;
+    private int screenHeight;
+
+    private Thread thread;
+    private int sampleRate = 44100;
+    private double frequency = 440;
+
+    private boolean isRunning = true;
+    private boolean isTouching = false;
+
+    private int offset;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        Display display = getWindowManager().getDefaultDisplay();
+        Point size = new Point();
+        display.getSize(size);
+        screenWidth = size.x;
+        screenHeight = size.y;
+
+        thread = new Thread() {
+            public void run() {
+                Log.d("thread","thread started");
+                setPriority(Thread.MAX_PRIORITY);
+                int bufferSize = AudioTrack.getMinBufferSize(sampleRate,
+                        AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT);
+                AudioTrack audioTrack = new AudioTrack(AudioManager.STREAM_MUSIC,
+                        sampleRate, AudioFormat.CHANNEL_OUT_MONO,
+                        AudioFormat.ENCODING_PCM_16BIT, bufferSize,
+                        AudioTrack.MODE_STREAM);
+
+                short samples[] = new short[bufferSize];
+                int amplitude = 10000;
+                double twopi = 8.*Math.atan(1.);
+                double phase = 0.0;
+
+                audioTrack.play();
+
+                while(isRunning){
+                    while(isTouching) {
+                        frequency = 440 + 40 * offset;
+                        for (int i = 0; i < bufferSize; i++) {
+                            samples[i] = (short) (amplitude * Math.sin(phase));
+                            phase += twopi * frequency / sampleRate;
+                        }
+                        audioTrack.write(samples, 0, bufferSize);
+                    }
+                }
+                audioTrack.stop();
+                audioTrack.release();
+                Log.d("thread","thread stopped");
+            }
+        };
+        thread.start();
     }
 
+    @Override
+    public boolean onTouchEvent(MotionEvent event) {
+        int action = event.getAction();
+        if(action == MotionEvent.ACTION_DOWN || action == MotionEvent.ACTION_MOVE) {
+            if(!isTouching) isTouching = true;
+            int x = (int) event.getX();
+            int y = (int) event.getY();
+            int xInRange = inRange(0, screenWidth, x, 0, valueRange);
+            int yInRange = inRange(0, screenHeight, y, 0, valueRange);
+            //Log.d("touch",xInRange + " " + yInRange);
+            offset = xInRange;
+            Log.d("touch",""+frequency);
+        }
+        if(action == MotionEvent.ACTION_UP) {
+            if(isTouching) isTouching = false;
+        }
+        return true;
+    }
+
+    public int inRange(int fromInit, int toInit, int value, int fromFinal, int toFinal) {
+        if(fromInit < toInit && fromFinal < toFinal && value >= fromInit && value <= toInit) {
+            int fromRange = toInit - fromInit;
+            int toRange = toFinal - fromFinal;
+            return (int) (value * ((double) toRange / (double) fromRange));
+        }
+        return -1;
+    }
+
+    public void onDestroy(){
+        super.onDestroy();
+        isRunning = false;
+        try {
+            thread.join();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        thread = null;
+    }
 
     /*@Override
     public boolean onCreateOptionsMenu(Menu menu) {
