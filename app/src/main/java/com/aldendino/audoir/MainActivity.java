@@ -63,7 +63,8 @@ public class MainActivity extends ActionBarActivity {
 
                 while(isRunning){
                     while(isTouching) {
-                        frequency = 110 * xOffset; //440 + 40 * xOffset;
+                        //frequency = 110 * xOffset;
+                        frequency = 55 + 10 * xOffset;
                         for (int i = 0; i < bufferSize; i++) {
                             //samples[i] = (short) (amplitude * Math.sin(phase));
                             //phase += twopi * frequency / sampleRate;
