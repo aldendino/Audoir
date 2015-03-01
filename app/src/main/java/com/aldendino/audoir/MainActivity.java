@@ -15,7 +15,8 @@ import android.view.MotionEvent;
 
 public class MainActivity extends ActionBarActivity {
 
-    private final int valueRange = 20;
+    private final int xValueRange = 20;
+    private final int yValueRange = 9;
     private int screenWidth;
     private int screenHeight;
 
@@ -26,7 +27,8 @@ public class MainActivity extends ActionBarActivity {
     private boolean isRunning = true;
     private boolean isTouching = false;
 
-    private int offset;
+    private int xOffset;
+    private int yOffset;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -55,14 +57,19 @@ public class MainActivity extends ActionBarActivity {
                 double twopi = 8.*Math.atan(1.);
                 double phase = 0.0;
 
+                int sample = 0;
+
                 audioTrack.play();
 
                 while(isRunning){
                     while(isTouching) {
-                        frequency = 440 + 40 * offset;
+                        frequency = 110 * xOffset; //440 + 40 * xOffset;
                         for (int i = 0; i < bufferSize; i++) {
-                            samples[i] = (short) (amplitude * Math.sin(phase));
-                            phase += twopi * frequency / sampleRate;
+                            //samples[i] = (short) (amplitude * Math.sin(phase));
+                            //phase += twopi * frequency / sampleRate;
+                            samples[i] = computeSawWave(amplitude, frequency, sample, yOffset * yOffset);
+                            sample ++;
+                            if (sample >= sampleRate) sample = 0;
                         }
                         audioTrack.write(samples, 0, bufferSize);
                     }
@@ -75,6 +82,37 @@ public class MainActivity extends ActionBarActivity {
         thread.start();
     }
 
+    private short computeWave(int amplitude, double frequency, int sample) {
+        return (short) (amplitude * Math.sin(2 * Math.PI * frequency * (double) sample / sampleRate));
+    }
+
+    private short computeSquareWave(int amplitude, double frequency, int sample, int squareness) {
+        short wave = 0;
+        for (int i = 0; i < squareness; i++) {
+            int change = 1 + (2 * i);
+            wave += computeWave((int) ((double) amplitude / change), frequency * (double) change, sample);
+        }
+        return wave;
+    }
+
+    private short computeEvenWave(int amplitude, double frequency, int sample, int squareness) {
+        short wave = 0;
+        for (int i = 0; i < squareness; i++) {
+            int change = 2 * i - 1;
+            wave += computeWave((int) ((double) amplitude / change), frequency * (double) change, sample);
+        }
+        return wave;
+    }
+
+    private short computeSawWave(int amplitude, double frequency, int sample, int squareness) {
+        short wave = 0;
+        for (int i = 0; i < squareness; i++) {
+            int change = 1 + i;
+            wave += computeWave((int) ((double) amplitude / change), frequency * (double) change, sample);
+        }
+        return wave;
+    }
+
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         int action = event.getAction();
@@ -82,11 +120,10 @@ public class MainActivity extends ActionBarActivity {
             if(!isTouching) isTouching = true;
             int x = (int) event.getX();
             int y = (int) event.getY();
-            int xInRange = inRange(0, screenWidth, x, 0, valueRange);
-            int yInRange = inRange(0, screenHeight, y, 0, valueRange);
-            //Log.d("touch",xInRange + " " + yInRange);
-            offset = xInRange;
-            Log.d("touch",""+frequency);
+            xOffset = inRange(0, screenWidth, x, 0, xValueRange);
+            yOffset = inRange(0, screenHeight, y, 0, yValueRange);
+            //Log.d("touch",""+frequency);
+            Log.d("touch", "" + yOffset);
         }
         if(action == MotionEvent.ACTION_UP) {
             if(isTouching) isTouching = false;
