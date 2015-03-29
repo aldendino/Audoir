@@ -1,6 +1,9 @@
 package com.aldendino.audoir;
 
+import android.content.Context;
 import android.graphics.Point;
+import android.hardware.camera2.CameraAccessException;
+import android.hardware.camera2.CameraManager;
 import android.media.AudioFormat;
 import android.media.AudioManager;
 import android.media.AudioTrack;
@@ -30,10 +33,25 @@ public class MainActivity extends ActionBarActivity {
     private int xOffset;
     private int yOffset;
 
+    private enum Waves {Saw, Square};
+    private Waves wave = Waves.Saw;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        CameraManager manager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
+        try {
+            String[] camList = manager.getCameraIdList();
+            String list = "cams: ";
+            for(String cam : camList) {
+                list += cam + ",";
+            }
+            //Log.d("tag", list);
+        } catch (CameraAccessException cae) {
+            //
+        }
 
         Display display = getWindowManager().getDefaultDisplay();
         Point size = new Point();
@@ -43,7 +61,7 @@ public class MainActivity extends ActionBarActivity {
 
         thread = new Thread() {
             public void run() {
-                Log.d("thread","thread started");
+                //Log.d("thread","thread started");
                 setPriority(Thread.MAX_PRIORITY);
                 int bufferSize = AudioTrack.getMinBufferSize(sampleRate,
                         AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT);
@@ -68,7 +86,8 @@ public class MainActivity extends ActionBarActivity {
                         for (int i = 0; i < bufferSize; i++) {
                             //samples[i] = (short) (amplitude * Math.sin(phase));
                             //phase += twopi * frequency / sampleRate;
-                            samples[i] = computeSawWave(amplitude, frequency, sample, yOffset * yOffset);
+                            if(wave == Waves.Saw) samples[i] = computeSawWave(amplitude, frequency, sample, yOffset * yOffset);
+                            else if(wave == Waves.Square) samples[i] = computeSquareWave(amplitude, frequency, sample, yOffset * yOffset);
                             sample ++;
                             if (sample >= sampleRate) sample = 0;
                         }
@@ -77,7 +96,7 @@ public class MainActivity extends ActionBarActivity {
                 }
                 audioTrack.stop();
                 audioTrack.release();
-                Log.d("thread","thread stopped");
+                //Log.d("thread","thread stopped");
             }
         };
         thread.start();
@@ -124,7 +143,7 @@ public class MainActivity extends ActionBarActivity {
             xOffset = inRange(0, screenWidth, x, 0, xValueRange);
             yOffset = inRange(0, screenHeight, y, 0, yValueRange);
             //Log.d("touch",""+frequency);
-            Log.d("touch", "" + yOffset);
+            //Log.d("touch", "" + yOffset);
         }
         if(action == MotionEvent.ACTION_UP) {
             if(isTouching) isTouching = false;
@@ -152,14 +171,14 @@ public class MainActivity extends ActionBarActivity {
         thread = null;
     }
 
-    /*@Override
+    @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.menu_main, menu);
         return true;
-    }*/
+    }
 
-    /*@Override
+    @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         // Handle action bar item clicks here. The action bar will
         // automatically handle clicks on the Home/Up button, so long
@@ -167,10 +186,16 @@ public class MainActivity extends ActionBarActivity {
         int id = item.getItemId();
 
         //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
+        if (id == R.id.action_saw) {
+            if(wave == Waves.Square) wave = Waves.Saw;
+
+            return true;
+        }
+        if (id == R.id.action_square) {
+            if(wave == Waves.Saw) wave = Waves.Square;
             return true;
         }
 
         return super.onOptionsItemSelected(item);
-    }*/
+    }
 }

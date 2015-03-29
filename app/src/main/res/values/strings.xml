@@ -1,6 +1,7 @@
 <resources>
     <string name="app_name">Audoir</string>
 
-    <string name="hello_world">Hello world!</string>
-    <string name="action_settings">Settings</string>
+    <!--<string name="action_settings">Settings</string>-->
+    <string name="action_saw">Saw</string>
+    <string name="action_square">Square</string>
 </resources>
