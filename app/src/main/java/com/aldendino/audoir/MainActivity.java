@@ -160,6 +160,13 @@ public class MainActivity extends ActionBarActivity {
         return -1;
     }
 
+    @Override
+    public void onStop() {
+        super.onStop();
+        isTouching = false;
+    }
+
+    @Override
     public void onDestroy(){
         super.onDestroy();
         isRunning = false;
